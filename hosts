@@ -1,0 +1,12 @@
+[linux]
+[linux:children]
+nginx
+tomcat
+
+[nginx]
+5.75.128.157
+
+[tomcat]
+5.75.128.157
+[linux:vars]
+ansible_user=ansible_user

@@ -1,0 +1,81 @@
+---
+- any_errors_fatal: false
+  gather_facts: false
+  hosts: tomcat
+  name: Install tomcat
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Update cache
+      apt:
+        update_cache: yes
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    - name: Install Tomcat
+      apt:
+        name: tomcat9
+        state: present
+
+    - name: Copy index.html for Tomcat Server 1
+      copy:
+        src: index.html
+        dest: /var/lib/tomcat9/webapps/ROOT/index.html
+        owner: tomcat
+        group: tomcat
+        mode: '0644'
+
+    - name: Run Tomcat
+      service:
+        name: tomcat9
+        state: started
+
+- any_errors_fatal: false
+  gather_facts: false
+  hosts: nginx
+  name: Install Nginx
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Update cache
+      apt:
+        update_cache: yes
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+    - name: create dir /etc/nginx/ssl
+      file:
+        path: /etc/nginx/ssl
+        state: directory
+        mode: '0755'
+    - name: Generate private_key
+      openssl_privatekey:
+        path: /etc/nginx/ssl/private.key
+    - name: Create a certificate request
+      openssl_csr:
+        path: /etc/nginx/ssl/certificate.csr
+        privatekey_path: /etc/nginx/ssl/private.key
+        common_name: "{{ nginx_tomcat_url }}"
+    - name: certificate sign
+      openssl_certificate:
+        path: /etc/nginx/ssl/certificate.crt
+        privatekey_path: /etc/nginx/ssl/private.key
+        csr_path: /etc/nginx/ssl/certificate.csr
+        provider: selfsigned
+    - name: Setup  Nginx config
+      template:
+        src: tomcat_proxy.conf.j2
+        dest: /etc/nginx/sites-available/tomcat_proxy.conf
+    - name: Activate Nginx config
+      file:
+        src: /etc/nginx/sites-available/tomcat_proxy.conf
+        dest: /etc/nginx/sites-enabled/tomcat_proxy.conf
+        state: link
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+ 
