@@ -1,0 +1,22 @@
+name: deploy
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Run playbook
+        uses: dawidd6/action-ansible-playbook@v2
+        with:
+          playbook: deploy.yml
+          directory: ./
+          key: ${{secrets.SSH_PRIVATE_KEY}}
+          vault_password: ${{secrets.ANS_PASS}}
+          options: |
+            --inventory hosts
+            --verbose
